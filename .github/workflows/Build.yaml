@@ -1,70 +1,27 @@
-name: Build ImmortalWrt for Mi 4A Gigabit with mwan3
+name: Build mwan3 IPK for ImmortalWrt 24.10
 
 on:
   workflow_dispatch:
 
-env:
-  REPO_URL: https://github.com/immortalwrt/immortalwrt
-  REPO_BRANCH: openwrt-24.10
-  TARGET: ramips
-  SUBTARGET: mt7621
-  DEVICE_NAME: xiaomi_mi-router-4a-gigabit
-  INCLUDE_PACKAGES: mwan3 luci-app-mwan3 iptables-nft ip6tables-nft kmod-ipt-nat kmod-ipt-conntrack-extra kmod-nf-nat6 kmod-nf-conntrack6
-  TZ: Asia/Jakarta
-
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Initialization environment
+      - name: Build mwan3 Package
+        uses: immortalwrt/gh-action-sdk@master
         env:
-          DEBIAN_FRONTEND: noninteractive
-        run: |
-          sudo -E apt-get -qq update
-          sudo -E apt-get -y install build-essential asciidoc binutils bzip2 gawk gettext git libncurses5-dev libz-dev patch python3 python2.7 unzip zlib1g-dev lib32gcc1 libc6-dev-i386 subversion flex uglifyjs git-core gcc-multilib p7zip p7zip-full msmtp libssl-dev texinfo libglib2.0-dev xmlto qemu-utils upx libelf-dev autoconf automake libtool autopoint device-tree-compiler g++-multilib antlr3 gperf wget curl swig rsync bison g++ gcc-multilib g++-multilib
+          ARCH: mipsel_24kc
+          PACKAGES: mwan3 luci-app-mwan3 iptables-nft ip6tables-nft kmod-ipt-nat kmod-ipt-conntrack-extra kmod-nf-nat6 kmod-nf-conntrack6
+          EXTRA_FEEDS: src-git packages https://github.com/immortalwrt/packages.git src-git luci https://github.com/immortalwrt/luci.git
+          V: s
+          BUILD_LOG: 1
 
-      - name: Clone source code
-        run: |
-          git clone --depth=1 --branch $REPO_BRANCH $REPO_URL openwrt
-          cd openwrt
-
-      - name: Update feeds
-        run: |
-          ./scripts/feeds update -a
-          ./scripts/feeds install -a
-
-      - name: Load custom configuration
-        run: |
-          cat > .config << EOF
-          CONFIG_TARGET_ramips=y
-          CONFIG_TARGET_ramips_mt7621=y
-          CONFIG_TARGET_ramips_mt7621_DEVICE_xiaomi_mi-router-4a-gigabit=y
-          CONFIG_PACKAGE_mwan3=y
-          CONFIG_PACKAGE_luci-app-mwan3=y
-          CONFIG_PACKAGE_iptables-nft=y
-          CONFIG_PACKAGE_ip6tables-nft=y
-          CONFIG_PACKAGE_kmod-ipt-nat=y
-          CONFIG_PACKAGE_kmod-ipt-conntrack-extra=y
-          CONFIG_PACKAGE_kmod-nf-nat6=y
-          CONFIG_PACKAGE_kmod-nf-conntrack6=y
-          EOF
-
-      - name: Make download
-        run: |
-          cd openwrt
-          make download -j8 V=s
-
-      - name: Compile the firmware
-        run: |
-          cd openwrt
-          make -j$(nproc) V=s
-
-      - name: Upload artifact
+      - name: Upload IPK Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: immortalwrt-mi4a-gigabit
-          path: openwrt/bin/targets/ramips/mt7621/*.bin
+          name: mwan3-ipks-mipsel_24kc
+          path: bin/packages/mipsel_24kc/packages/*.ipk
